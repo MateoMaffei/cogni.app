@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -55,10 +55,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     // Esperamos a que el fadeOut se vea
     await Future.delayed(const Duration(milliseconds: 500));
 
-    // Navegamos al login
+    // Navegamos al dashboard principal
     if (mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     }
   }
