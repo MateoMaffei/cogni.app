@@ -54,7 +54,17 @@ class SimonGame extends StatefulWidget {
 }
 
 class _SimonGameState extends State<SimonGame> {
-  final pads = const [Colors.red, Colors.blue, Colors.green, Colors.yellow];
+  final allPads = const [
+    Colors.red,
+    Colors.blue,
+    Colors.green,
+    Colors.yellow,
+    Colors.orange,
+    Colors.purple,
+    Colors.teal,
+    Colors.pink,
+  ];
+  late List<Color> _pads;
   late List<int> _sequence;
   int _currentIndex = 0;
   int? _flashIndex;
@@ -64,16 +74,29 @@ class _SimonGameState extends State<SimonGame> {
   @override
   void initState() {
     super.initState();
+    _configurePads();
     _generateSequence();
   }
 
-  void _generateSequence() {
+  void _configurePads() {
+    final targetCount = min(
+      allPads.length,
+      max(4, (widget.difficulty.stimuliCount / 1.5).ceil()),
+    );
+    _pads = allPads.take(targetCount).toList();
+  }
+
+  void _generateSequence({bool autoPlay = false}) {
     final random = Random();
     final length = max(3, widget.difficulty.stimuliCount.clamp(3, 10));
-    _sequence = List.generate(length, (_) => random.nextInt(pads.length));
+    _sequence = List.generate(length, (_) => random.nextInt(_pads.length));
     _currentIndex = 0;
     _status = 'Pulsa "Mostrar secuencia" y luego repítela.';
+    _isShowing = false;
     setState(() {});
+    if (autoPlay) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _playSequence());
+    }
   }
 
   Future<void> _playSequence() async {
@@ -84,9 +107,9 @@ class _SimonGameState extends State<SimonGame> {
     });
     for (final index in _sequence) {
       setState(() => _flashIndex = index);
-      await Future.delayed(const Duration(milliseconds: 600));
+      await Future.delayed(const Duration(milliseconds: 650));
       setState(() => _flashIndex = null);
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 280));
     }
     setState(() {
       _isShowing = false;
@@ -100,8 +123,9 @@ class _SimonGameState extends State<SimonGame> {
     if (_sequence[_currentIndex] == index) {
       if (_currentIndex == _sequence.length - 1) {
         setState(() {
-          _status = '¡Excelente! Secuencia completada.';
+          _status = '¡Excelente! Se muestra una nueva secuencia.';
         });
+        _generateSequence(autoPlay: true);
       } else {
         setState(() {
           _currentIndex += 1;
@@ -123,36 +147,47 @@ class _SimonGameState extends State<SimonGame> {
       children: [
         Text(_status, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: List.generate(pads.length, (index) {
-            final color = pads[index];
-            final isActive = _flashIndex == index;
-            return GestureDetector(
-              onTap: () => _onPadTap(index),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: isActive ? color.withOpacity(0.8) : color.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: isActive
-                      ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 16)]
-                      : [],
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final crossAxisCount = max(2, sqrt(_pads.length).ceil());
+              return GridView.builder(
+                padding: const EdgeInsets.only(bottom: 16),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1,
                 ),
-                child: Center(
-                  child: Text(
-                    ['A', 'B', 'C', 'D'][index],
-                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            );
-          }),
+                itemCount: _pads.length,
+                itemBuilder: (context, index) {
+                  final color = _pads[index];
+                  final isActive = _flashIndex == index;
+                  return GestureDetector(
+                    onTap: () => _onPadTap(index),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      decoration: BoxDecoration(
+                        color: isActive ? color : color.withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: isActive
+                            ? [
+                                BoxShadow(
+                                  color: color.withOpacity(0.65),
+                                  blurRadius: 28,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : [],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
         Row(
           children: [
             ElevatedButton.icon(
@@ -162,7 +197,7 @@ class _SimonGameState extends State<SimonGame> {
             ),
             const SizedBox(width: 12),
             OutlinedButton.icon(
-              onPressed: _generateSequence,
+              onPressed: () => _generateSequence(autoPlay: true),
               icon: const Icon(Icons.refresh),
               label: const Text('Nueva secuencia'),
             ),
@@ -207,7 +242,17 @@ class _MemoryPairsGameState extends State<MemoryPairsGame> {
     ];
     final neededPairs = (widget.difficulty.stimuliCount ~/ 2).clamp(2, 6);
     final selected = icons.take(neededPairs).toList();
-    final deck = [...selected, ...selected]..shuffle();
+    final deck = [...selected, ...selected];
+    final random = Random();
+    for (int i = 0; i < 5; i++) {
+      deck.shuffle(random);
+    }
+    final columns = _gridColumns(deck.length);
+    int attempts = 0;
+    while (_hasAdjacentPairs(deck, columns) && attempts < 12) {
+      deck.shuffle(random);
+      attempts++;
+    }
     _cards = deck
         .asMap()
         .entries
@@ -251,6 +296,7 @@ class _MemoryPairsGameState extends State<MemoryPairsGame> {
 
   @override
   Widget build(BuildContext context) {
+    final crossAxisCount = _gridColumns(_cards.length);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -259,10 +305,10 @@ class _MemoryPairsGameState extends State<MemoryPairsGame> {
         Expanded(
           child: GridView.builder(
             itemCount: _cards.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
             ),
             itemBuilder: (context, index) {
               final card = _cards[index];
@@ -314,6 +360,24 @@ class _CardItem {
   bool isMatched = false;
 }
 
+int _gridColumns(int length) {
+  if (length <= 6) return 2;
+  if (length <= 12) return 3;
+  return 4;
+}
+
+bool _hasAdjacentPairs(List<IconData> deck, int columns) {
+  for (int i = 0; i < deck.length; i++) {
+    if ((i % columns) != columns - 1 && deck[i] == deck[i + 1]) {
+      return true;
+    }
+    if (i + columns < deck.length && deck[i] == deck[i + columns]) {
+      return true;
+    }
+  }
+  return false;
+}
+
 class StroopGame extends StatefulWidget {
   const StroopGame({super.key, required this.difficulty});
 
@@ -324,8 +388,28 @@ class StroopGame extends StatefulWidget {
 }
 
 class _StroopGameState extends State<StroopGame> {
-  final colors = const [Colors.red, Colors.green, Colors.blue, Colors.orange];
-  final colorNames = const ['ROJO', 'VERDE', 'AZUL', 'NARANJA'];
+  final availableColors = const [
+    Colors.red,
+    Colors.green,
+    Colors.blue,
+    Colors.orange,
+    Colors.purple,
+    Colors.teal,
+    Colors.pink,
+    Colors.brown,
+  ];
+  final availableNames = const [
+    'ROJO',
+    'VERDE',
+    'AZUL',
+    'NARANJA',
+    'MORADO',
+    'TURQUESA',
+    'ROSA',
+    'MARRÓN',
+  ];
+  late List<Color> _colors;
+  late List<String> _colorNames;
   late int _targetIndex;
   late int _textIndex;
   int _score = 0;
@@ -335,6 +419,7 @@ class _StroopGameState extends State<StroopGame> {
   @override
   void initState() {
     super.initState();
+    _configurePalette();
     _setupRound();
     _startTimer();
   }
@@ -345,16 +430,23 @@ class _StroopGameState extends State<StroopGame> {
     super.dispose();
   }
 
+  void _configurePalette() {
+    final desired = max(4, (widget.difficulty.stimuliCount / 2).ceil());
+    final count = min(availableColors.length, desired);
+    _colors = availableColors.take(count).toList();
+    _colorNames = availableNames.take(count).toList();
+  }
+
   void _setupRound() {
     final random = Random();
-    _targetIndex = random.nextInt(colors.length);
+    _targetIndex = random.nextInt(_colors.length);
     final allowCongruent = widget.difficulty.level == 'Suave';
     if (allowCongruent) {
       _textIndex = _targetIndex;
     } else {
-      _textIndex = random.nextInt(colors.length);
+      _textIndex = random.nextInt(_colors.length);
       if (_textIndex == _targetIndex) {
-        _textIndex = (_textIndex + 1) % colors.length;
+        _textIndex = (_textIndex + 1) % _colors.length;
       }
     }
     setState(() {});
@@ -409,29 +501,51 @@ class _StroopGameState extends State<StroopGame> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              colorNames[_textIndex],
+              _colorNames[_textIndex],
               style: TextStyle(
-                color: colors[_targetIndex],
-                fontSize: 32,
+                color: _colors[_targetIndex],
+                fontSize: 44,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
         ),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          children: List.generate(colors.length, (index) {
-            return ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors[index],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = constraints.maxWidth > 700;
+            final crossAxisCount = isTablet
+                ? 3
+                : constraints.maxWidth > 480
+                    ? 2
+                    : 2;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: isTablet ? 2.8 : 2.2,
               ),
-              onPressed: () => _onSelect(index),
-              child: Text(colorNames[index]),
+              itemCount: _colors.length,
+              itemBuilder: (context, index) {
+                return ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _colors[index],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    minimumSize: const Size.fromHeight(56),
+                  ),
+                  onPressed: () => _onSelect(index),
+                  child: Text(
+                    _colorNames[index],
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                );
+              },
             );
-          }),
+          },
         ),
       ],
     );
