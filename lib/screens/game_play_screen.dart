@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:cogni_app/models/game.dart';
+import 'package:cogni_app/screens/dashboard_screen.dart';
+import 'package:cogni_app/widgets/app_drawer.dart';
 import 'package:flutter/material.dart';
 
 class GamePlayScreen extends StatefulWidget {
@@ -15,6 +17,20 @@ class GamePlayScreen extends StatefulWidget {
 }
 
 class _GamePlayScreenState extends State<GamePlayScreen> {
+  void _goHome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      (route) => false,
+    );
+  }
+
+  void _goToCategory(GameCategory category) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => DashboardScreen(initialCategory: category)),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final body = switch (widget.game.id) {
@@ -25,6 +41,11 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
     };
 
     return Scaffold(
+      drawer: AppDrawer(
+        selectedCategory: widget.game.category,
+        onGoHome: _goHome,
+        onGoCategory: _goToCategory,
+      ),
       appBar: AppBar(
         title: Text(widget.game.title),
         actions: [

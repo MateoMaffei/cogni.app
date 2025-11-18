@@ -1,7 +1,9 @@
 import 'package:cogni_app/bloc/session_bloc.dart';
 import 'package:cogni_app/models/game.dart';
 import 'package:cogni_app/providers/game_settings_provider.dart';
+import 'package:cogni_app/screens/dashboard_screen.dart';
 import 'package:cogni_app/screens/game_play_screen.dart';
+import 'package:cogni_app/widgets/app_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,101 +19,156 @@ class GameDetailScreen extends ConsumerWidget {
         game.difficultyOptions.first;
 
     return Scaffold(
+      drawer: AppDrawer(
+        selectedCategory: game.category,
+        onGoHome: () => _goHome(context),
+        onGoCategory: (category) => _goToCategory(context, category),
+      ),
       appBar: AppBar(
         title: Text(game.title),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _SectionHeader(
-            icon: Icons.info_outline,
-            title: 'Objetivo terapéutico',
-          ),
-          Text(game.objective, style: Theme.of(context).textTheme.bodyLarge),
-          const SizedBox(height: 12),
-          _TagsBlock(
-            label: 'Enfoque cognitivo',
-            items: game.therapeuticFocus,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          _TagsBlock(
-            label: 'Enfoque motor',
-            items: game.motorFocus,
-            color: Theme.of(context).colorScheme.secondary,
-          ),
-          _SectionHeader(icon: Icons.flag_outlined, title: 'Cómo ayuda'),
-          ...game.howItHelps.map((item) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.check_circle_outline),
-                title: Text(item),
-              )),
-          const SizedBox(height: 8),
-          _SectionHeader(icon: Icons.settings_suggest_outlined, title: 'Configura la dificultad'),
-          Row(
-            children: [
-              const Icon(Icons.volunteer_activism_outlined, color: Colors.grey),
-              const SizedBox(width: 8),
-              Expanded(
-                child: BlocBuilder<SessionBloc, SessionState>(
-                  builder: (context, state) {
-                    return Text(
-                      state.guidedMode
-                          ? 'Modo guiado activo para terapeutas'
-                          : 'Modo libre para práctica individual',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: Colors.grey[700]),
-                    );
-                  },
-                ),
+      body: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 28 + MediaQuery.of(context).padding.bottom),
+          children: [
+            _InfoCard(
+              icon: Icons.info_outline,
+              title: 'Objetivo terapéutico',
+              child: Text(game.objective, style: Theme.of(context).textTheme.bodyLarge),
+            ),
+            _InfoCard(
+              icon: Icons.extension_outlined,
+              title: 'Enfoques',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _TagsBlock(
+                    label: 'Enfoque cognitivo',
+                    items: game.therapeuticFocus,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 6),
+                  _TagsBlock(
+                    label: 'Enfoque motor',
+                    items: game.motorFocus,
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
+                ],
               ),
-              Switch(
-                value: context.read<SessionBloc>().state.guidedMode,
-                onChanged: (_) => context.read<SessionBloc>().add(ToggleGuidedMode()),
+            ),
+            _InfoCard(
+              icon: Icons.flag_outlined,
+              title: 'Cómo ayuda',
+              child: Column(
+                children: game.howItHelps
+                    .map(
+                      (item) => ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.check_circle_outline),
+                        title: Text(item),
+                      ),
+                    )
+                    .toList(),
               ),
-            ],
-          ),
-          DropdownButtonFormField<GameDifficultyOption>(
-            value: difficulty,
-            decoration: const InputDecoration(labelText: 'Nivel'),
-            items: game.difficultyOptions
-                .map((option) => DropdownMenuItem(
-                      value: option,
-                      child: Text('${option.level} • ${option.description}'),
-                    ))
-                .toList(),
-            onChanged: (option) {
-              if (option != null) {
-                ref.read(gameConfigProvider.notifier).setDifficulty(game.id, option);
-              }
-            },
-          ),
-          const SizedBox(height: 8),
-          _DifficultyChips(
-            options: game.difficultyOptions,
-            selected: difficulty,
-            gameId: game.id,
-          ),
-          const SizedBox(height: 16),
-          _SectionHeader(icon: Icons.rule, title: 'Instrucciones'),
-          ...game.instructions.map((step) => ListTile(
-                leading: const Icon(Icons.play_arrow),
-                title: Text(step),
-              )),
-          const SizedBox(height: 8),
-          _SectionHeader(icon: Icons.health_and_safety_outlined, title: 'Recomendaciones para el terapeuta'),
-          ...game.setupNotes.map((note) => ListTile(
-                leading: const Icon(Icons.lightbulb_outline),
-                title: Text(note),
-              )),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.play_circle_outline),
-            label: const Text('Iniciar práctica'),
-            onPressed: () => _startPractice(context, difficulty),
-          ),
-        ],
+            ),
+            _InfoCard(
+              icon: Icons.settings_suggest_outlined,
+              title: 'Configura la dificultad',
+              child: Column(
+                children: [
+                  BlocBuilder<SessionBloc, SessionState>(
+                    builder: (context, state) {
+                      return Row(
+                        children: [
+                          const Icon(Icons.volunteer_activism_outlined, color: Colors.grey),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              state.guidedMode
+                                  ? 'Modo guiado activo para terapeutas'
+                                  : 'Modo libre para práctica individual',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(color: Colors.grey[700]),
+                            ),
+                          ),
+                          Switch(
+                            value: state.guidedMode,
+                            onChanged: (_) => context.read<SessionBloc>().add(ToggleGuidedMode()),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<GameDifficultyOption>(
+                    isExpanded: true,
+                    value: difficulty,
+                    decoration: const InputDecoration(labelText: 'Nivel'),
+                    items: game.difficultyOptions
+                        .map((option) => DropdownMenuItem(
+                              value: option,
+                              child: Text('${option.level} • ${option.description}'),
+                            ))
+                        .toList(),
+                    onChanged: (option) {
+                      if (option != null) {
+                        ref.read(gameConfigProvider.notifier).setDifficulty(game.id, option);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _DifficultyChips(
+                    options: game.difficultyOptions,
+                    selected: difficulty,
+                    gameId: game.id,
+                  ),
+                ],
+              ),
+            ),
+            _InfoCard(
+              icon: Icons.rule,
+              title: 'Instrucciones',
+              child: Column(
+                children: game.instructions
+                    .map(
+                      (step) => ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.play_arrow),
+                        title: Text(step),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+            _InfoCard(
+              icon: Icons.health_and_safety_outlined,
+              title: 'Recomendaciones para el terapeuta',
+              child: Column(
+                children: game.setupNotes
+                    .map(
+                      (note) => ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.lightbulb_outline),
+                        title: Text(note),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.play_circle_outline),
+                label: const Text('Iniciar práctica'),
+                onPressed: () => _startPractice(context, difficulty),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -123,24 +180,53 @@ class GameDetailScreen extends ConsumerWidget {
       ),
     );
   }
+
+  void _goHome(BuildContext context) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      (route) => false,
+    );
+  }
+
+  void _goToCategory(BuildContext context, GameCategory category) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => DashboardScreen(initialCategory: category)),
+      (route) => false,
+    );
+  }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.icon, required this.title});
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({required this.icon, required this.title, required this.child});
 
   final IconData icon;
   final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 8),
-          Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-        ],
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
       ),
     );
   }
