@@ -118,8 +118,16 @@ class _SimonGameState extends State<SimonGame> {
     });
   }
 
+  Future<void> _flashTap(int index) async {
+    setState(() => _flashIndex = index);
+    await Future.delayed(const Duration(milliseconds: 220));
+    if (!mounted) return;
+    setState(() => _flashIndex = null);
+  }
+
   void _onPadTap(int index) {
     if (_isShowing) return;
+    _flashTap(index);
     if (_sequence[_currentIndex] == index) {
       if (_currentIndex == _sequence.length - 1) {
         setState(() {
