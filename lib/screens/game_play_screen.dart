@@ -37,6 +37,7 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
       'simon' => SimonGame(difficulty: widget.difficulty),
       'parejas' => MemoryPairsGame(difficulty: widget.difficulty),
       'stroop' => StroopGame(difficulty: widget.difficulty),
+      'calculo' => CalculationGame(difficulty: widget.difficulty),
       _ => ComingSoonGame(game: widget.game),
     };
 
@@ -575,6 +576,240 @@ class _StroopGameState extends State<StroopGame> {
               },
             );
           },
+        ),
+      ],
+    );
+  }
+}
+
+class CalculationGame extends StatefulWidget {
+  const CalculationGame({super.key, required this.difficulty});
+
+  final GameDifficultyOption difficulty;
+
+  @override
+  State<CalculationGame> createState() => _CalculationGameState();
+}
+
+class _CalculationGameState extends State<CalculationGame> {
+  final _random = Random();
+  late int _targetRounds;
+  int _solved = 0;
+  int _expected = 0;
+  String _problem = '';
+  String _input = '';
+  String _status = 'Resuelve la operación y toca Enviar.';
+  Timer? _timer;
+  int? _remainingSeconds;
+
+  @override
+  void initState() {
+    super.initState();
+    _targetRounds = max(5, widget.difficulty.stimuliCount);
+    _prepareProblem();
+    _startTimerIfNeeded();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimerIfNeeded() {
+    if (widget.difficulty.timeSeconds == 0) return;
+    _remainingSeconds = widget.difficulty.timeSeconds;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      setState(() {
+        if (_remainingSeconds != null && _remainingSeconds! > 0) {
+          _remainingSeconds = _remainingSeconds! - 1;
+          if (_remainingSeconds != null && _remainingSeconds! <= 0) {
+            timer.cancel();
+          }
+        }
+      });
+    });
+  }
+
+  void _prepareProblem() {
+    final level = widget.difficulty.level;
+    int a;
+    int b;
+    String op;
+    if (level == 'Suave') {
+      a = _random.nextInt(8) + 1;
+      b = _random.nextInt(8) + 1;
+      op = '+';
+      _expected = a + b;
+    } else if (level == 'Medio') {
+      a = _random.nextInt(14) + 3;
+      b = _random.nextInt(10) + 2;
+      op = _random.nextBool() ? '+' : '-';
+      if (op == '-' && a < b) {
+        final tmp = a;
+        a = b;
+        b = tmp;
+      }
+      _expected = op == '+' ? a + b : a - b;
+    } else {
+      a = _random.nextInt(20) + 5;
+      b = _random.nextInt(9) + 1;
+      final ops = ['+', '-', '×'];
+      op = ops[_random.nextInt(ops.length)];
+      switch (op) {
+        case '+':
+          _expected = a + b;
+          break;
+        case '-':
+          _expected = a - b;
+          break;
+        default:
+          _expected = a * b;
+      }
+    }
+    setState(() {
+      _problem = '$a $op $b = ?';
+      _input = '';
+    });
+  }
+
+  void _append(String value) {
+    if (_input.length >= 4) return;
+    setState(() => _input = '$_input$value');
+  }
+
+  void _backspace() {
+    if (_input.isEmpty) return;
+    setState(() => _input = _input.substring(0, _input.length - 1));
+  }
+
+  void _submit() {
+    if (_input.isEmpty) return;
+    final answer = int.tryParse(_input);
+    if (answer == _expected) {
+      setState(() {
+        _solved += 1;
+        _status = _solved >= _targetRounds
+            ? '¡Meta lograda! Sigue practicando si lo deseas.'
+            : '¡Correcto! Continúa con el siguiente.';
+      });
+      _prepareProblem();
+    } else {
+      setState(() {
+        _status = 'Revisa el cálculo e inténtalo nuevamente.';
+        _input = '';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Ejercicios: $_solved / $_targetRounds',
+                style: Theme.of(context).textTheme.titleMedium),
+            if (widget.difficulty.timeSeconds > 0)
+              Chip(
+                label: Text(
+                  _remainingSeconds != null ? 'Tiempo: ${_remainingSeconds}s' : 'Tiempo',
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(_status, style: Theme.of(context).textTheme.bodyLarge),
+        const SizedBox(height: 16),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              _problem,
+              style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              _input.isEmpty ? 'Respuesta' : _input,
+              style: const TextStyle(fontSize: 32, letterSpacing: 1.5),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final buttonHeight = max(64.0, constraints.maxHeight / 4.5);
+              final keys = [
+                '1',
+                '2',
+                '3',
+                '4',
+                '5',
+                '6',
+                '7',
+                '8',
+                '9',
+                '⌫',
+                '0',
+                'OK',
+              ];
+              return GridView.builder(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: constraints.maxWidth > 600 ? 2.4 : 1.1,
+                ),
+                itemCount: keys.length,
+                itemBuilder: (context, index) {
+                  final label = keys[index];
+                  return SizedBox(
+                    height: buttonHeight,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (label == '⌫') {
+                          _backspace();
+                        } else if (label == 'OK') {
+                          _submit();
+                        } else {
+                          _append(label);
+                        }
+                      },
+                      child: Text(
+                        label,
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         ),
       ],
     );

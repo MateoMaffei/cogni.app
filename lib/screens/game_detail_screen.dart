@@ -1,11 +1,9 @@
-import 'package:cogni_app/bloc/session_bloc.dart';
 import 'package:cogni_app/models/game.dart';
 import 'package:cogni_app/providers/game_settings_provider.dart';
 import 'package:cogni_app/screens/dashboard_screen.dart';
 import 'package:cogni_app/screens/game_play_screen.dart';
 import 'package:cogni_app/widgets/app_drawer.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class GameDetailScreen extends ConsumerWidget {
@@ -77,32 +75,6 @@ class GameDetailScreen extends ConsumerWidget {
               title: 'Configura la dificultad',
               child: Column(
                 children: [
-                  BlocBuilder<SessionBloc, SessionState>(
-                    builder: (context, state) {
-                      return Row(
-                        children: [
-                          const Icon(Icons.volunteer_activism_outlined, color: Colors.grey),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              state.guidedMode
-                                  ? 'Modo guiado activo para terapeutas'
-                                  : 'Modo libre para práctica individual',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(color: Colors.grey[700]),
-                            ),
-                          ),
-                          Switch(
-                            value: state.guidedMode,
-                            onChanged: (_) => context.read<SessionBloc>().add(ToggleGuidedMode()),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
                   DropdownButtonFormField<GameDifficultyOption>(
                     isExpanded: true,
                     value: difficulty,
@@ -110,7 +82,11 @@ class GameDetailScreen extends ConsumerWidget {
                     items: game.difficultyOptions
                         .map((option) => DropdownMenuItem(
                               value: option,
-                              child: Text('${option.level} • ${option.description}'),
+                              child: Text(
+                                '${option.level} • ${option.description}',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ))
                         .toList(),
                     onChanged: (option) {
@@ -159,12 +135,15 @@ class GameDetailScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.play_circle_outline),
-                label: const Text('Iniciar práctica'),
-                onPressed: () => _startPractice(context, difficulty),
+            SafeArea(
+              top: false,
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.play_circle_outline),
+                  label: const Text('Iniciar práctica'),
+                  onPressed: () => _startPractice(context, difficulty),
+                ),
               ),
             ),
           ],

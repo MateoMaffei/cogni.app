@@ -1,8 +1,12 @@
+import 'package:cogni_app/bloc/session_bloc.dart';
 import 'package:cogni_app/data/games.dart';
 import 'package:cogni_app/models/game.dart';
+import 'package:cogni_app/providers/game_settings_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends ConsumerWidget {
   const AppDrawer({
     super.key,
     required this.onGoHome,
@@ -15,7 +19,7 @@ class AppDrawer extends StatelessWidget {
   final GameCategory? selectedCategory;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Drawer(
       child: SafeArea(
         child: ListView(
@@ -64,6 +68,28 @@ class AppDrawer extends StatelessWidget {
                       onGoCategory(category);
                     },
                   ),
+                ),
+              ],
+            ),
+            ExpansionTile(
+              leading: const Icon(Icons.settings_outlined),
+              title: const Text('Configuraciones'),
+              children: [
+                BlocBuilder<SessionBloc, SessionState>(
+                  builder: (context, state) {
+                    return SwitchListTile(
+                      value: state.guidedMode,
+                      onChanged: (_) {
+                        context.read<SessionBloc>().add(ToggleGuidedMode());
+                        ref.read(guidedModeProvider.notifier).state = !state.guidedMode;
+                      },
+                      title: const Text('Modo guiado para terapeutas'),
+                      subtitle: const Text(
+                        'Activa para dirigir la sesión; desactiva para práctica libre.',
+                      ),
+                      secondary: const Icon(Icons.supervisor_account_outlined),
+                    );
+                  },
                 ),
               ],
             ),
