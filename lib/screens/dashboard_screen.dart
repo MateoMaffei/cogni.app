@@ -49,7 +49,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24 + MediaQuery.of(context).padding.bottom),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          24 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
           _HeroBanner(guidedMode: guidedMode),
           const SizedBox(height: 16),
