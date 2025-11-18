@@ -1,6 +1,7 @@
 import 'package:cogni_app/bloc/session_bloc.dart';
 import 'package:cogni_app/models/game.dart';
 import 'package:cogni_app/providers/game_settings_provider.dart';
+import 'package:cogni_app/screens/game_play_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -107,67 +108,18 @@ class GameDetailScreen extends ConsumerWidget {
           const SizedBox(height: 20),
           ElevatedButton.icon(
             icon: const Icon(Icons.play_circle_outline),
-            label: const Text('Iniciar práctica guiada'),
-            onPressed: () => _showPracticePlan(context, difficulty),
+            label: const Text('Iniciar práctica'),
+            onPressed: () => _startPractice(context, difficulty),
           ),
         ],
       ),
     );
   }
 
-  void _showPracticePlan(BuildContext context, GameDifficultyOption difficulty) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.route, color: Colors.blueGrey),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Plan rápido',
-                    style: Theme.of(ctx).textTheme.titleMedium,
-                  ),
-                ),
-                Chip(label: Text(difficulty.level)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Tiempo sugerido: ${difficulty.timeSeconds > 0 ? '${difficulty.timeSeconds} seg' : 'sin límite'}',
-              style: Theme.of(ctx).textTheme.bodyMedium,
-            ),
-            Text(
-              'Número de estímulos: ${difficulty.stimuliCount}',
-              style: Theme.of(ctx).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 12),
-            const Text('Consejos rápidos:'),
-            const SizedBox(height: 8),
-            const Text('• Explica la consigna lentamente y demuestra un ejemplo.'),
-            const Text('• Ajusta la velocidad según el nivel seleccionado.'),
-            const Text('• Registra comentarios cualitativos del paciente (no se guardan datos).'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Listo, comenzar juego'),
-            ),
-          ],
-        ),
+  void _startPractice(BuildContext context, GameDifficultyOption difficulty) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => GamePlayScreen(game: game, difficulty: difficulty),
       ),
     );
   }
