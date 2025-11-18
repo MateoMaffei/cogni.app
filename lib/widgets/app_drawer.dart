@@ -59,7 +59,7 @@ class AppDrawer extends StatelessWidget {
                     title: Text(categoryLabels[category] ?? ''),
                     selected: selectedCategory == category,
                     onTap: () {
-                      Navigator.pop(context);
+                      Navigator.of(context).pop();
                       onGoCategory(category);
                     },
                   ),
